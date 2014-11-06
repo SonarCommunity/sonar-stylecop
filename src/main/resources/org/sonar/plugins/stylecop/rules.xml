@@ -1,4 +1,28 @@
 <rules>
+  <rule key="CustomRuleTemplate">
+    <cardinality>MULTIPLE</cardinality>
+    <priority>MAJOR</priority>
+    <name><![CDATA[Template for custom StyleCop rules]]></name>
+    <description>
+      <![CDATA[
+<p>
+Follow these steps to make your custom FxCop rules available in SonarQube:
+</p>
+
+<ol>
+  <li>Place your custom StyleCop rules assemblies in the same directory as your StyleCop installation directory.</li>
+  <li>For each custom rule:</li>
+  <ol>
+    <li>Create a new rule in SonarQube by "copying" this rule template and specify the <code>RuleName</code> of your custom rule, the <code>AnalyzerId</code>, a title, a description, and a default severity.</li>
+    <li>Enable the newly created rule in your quality profile</li>
+  </ol>
+  <li>Relaunch an analysis on your projects, et voilà, your custom rules are executed!</li>
+</ol>
+      ]]>
+    </description>
+    <param key="RuleName" />
+    <param key="AnalyzerId" />
+  </rule>
   <rule key="ElementMustBeginWithUpperCaseLetter">
     <name>Element must begin with upper case letter</name>
     <configKey>StyleCop.CSharp.NamingRules#ElementMustBeginWithUpperCaseLetter

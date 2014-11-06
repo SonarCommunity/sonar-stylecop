@@ -36,7 +36,7 @@ public class StyleCopRuleRepositoryTest {
     assertThat(repo.getKey()).isEqualTo("stylecop");
 
     List<Rule> rules = repo.createRules();
-    assertThat(rules.size()).isEqualTo(169);
+    assertThat(rules.size()).isEqualTo(170);
     for (Rule rule : rules) {
       assertThat(rule.getKey()).isNotNull();
       assertThat(rule.getName()).isNotNull();

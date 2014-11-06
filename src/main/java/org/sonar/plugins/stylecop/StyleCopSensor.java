@@ -22,6 +22,7 @@ package org.sonar.plugins.stylecop;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.batch.Sensor;
@@ -37,11 +38,15 @@ import org.sonar.api.scan.filesystem.FileQuery;
 import org.sonar.api.scan.filesystem.ModuleFileSystem;
 
 import java.io.File;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
 public class StyleCopSensor implements Sensor {
 
+  private static final String CUSTOM_RULE_KEY = "CustomRuleTemplate";
+  private static final String CUSTOM_RULE_NAME_PARAMETER = "RuleName";
+  private static final String CUSTOM_RULE_ANALYZER_ID_PARAMETER = "AnalyzerId";
   private static final Logger LOG = LoggerFactory.getLogger(StyleCopSensor.class);
 
   private final Settings settings;
@@ -107,7 +112,7 @@ public class StyleCopSensor implements Sensor {
 
     boolean skippedIssues = false;
 
-    Set<String> enabledRuleKeys = enabledRuleKeys();
+    Set<StyleCopActiveRule> enabledRuleKeys = enabledRuleKeys();
     for (StyleCopIssue issue : parser.parse(reportFile)) {
       File file = new File(issue.source());
       org.sonar.api.resources.File sonarFile = fileProvider.fromIOFile(file);
@@ -119,13 +124,13 @@ public class StyleCopSensor implements Sensor {
         if (issuable == null) {
           skippedIssues = true;
           logSkippedIssueOutsideOfSonarQube(issue, file);
-        } else if (!enabledRuleKeys.contains(issue.rule())) {
+        } else if (getRuleKey(enabledRuleKeys, issue) == null) {
           skippedIssues = true;
           logSkippedIssue(issue, "because the rule \"" + issue.rule() + "\" is either missing or inactive in the quality profile.");
         } else {
           issuable.addIssue(
             issuable.newIssueBuilder()
-              .ruleKey(RuleKey.of(StyleCopPlugin.REPOSITORY_KEY, issue.rule()))
+              .ruleKey(RuleKey.of(StyleCopPlugin.REPOSITORY_KEY, getRuleKey(enabledRuleKeys, issue)))
               .line(issue.lineNumber())
               .message(issue.message())
               .build());
@@ -137,8 +142,17 @@ public class StyleCopSensor implements Sensor {
       LOG.info("The import of some StyleCop issues were skipped. See DEBUG logs for details.");
     }
   }
+  
+  private String getRuleKey(Set<StyleCopActiveRule> enabledRuleKeys, StyleCopIssue issue) {
+    for (StyleCopActiveRule rule : enabledRuleKeys) {
+      if (rule.getEffectiveConfigKey().equals(issue.rule())) {
+        return rule.getRuleKey();
+      }
+    }
+    return null;
+  }
 
-  private static void logSkippedIssueOutsideOfSonarQube(StyleCopIssue issue, File file) {
+private static void logSkippedIssueOutsideOfSonarQube(StyleCopIssue issue, File file) {
     logSkippedIssue(issue, "whose file \"" + file.getAbsolutePath() + "\" is not in SonarQube.");
   }
 
@@ -149,17 +163,50 @@ public class StyleCopSensor implements Sensor {
   private List<String> enabledRuleConfigKeys() {
     ImmutableList.Builder<String> builder = ImmutableList.builder();
     for (ActiveRule activeRule : profile.getActiveRulesByRepository(StyleCopPlugin.REPOSITORY_KEY)) {
-      builder.add(activeRule.getConfigKey());
+      if (!CUSTOM_RULE_KEY.equals(activeRule.getRuleKey())) {
+        String effectiveConfigKey = activeRule.getConfigKey();
+        if (effectiveConfigKey == null) {
+          effectiveConfigKey = activeRule.getParameter(CUSTOM_RULE_ANALYZER_ID_PARAMETER) + "#" + activeRule.getParameter(CUSTOM_RULE_NAME_PARAMETER);
+        }
+        builder.add(effectiveConfigKey);
+      }
     }
     return builder.build();
   }
 
-  private Set<String> enabledRuleKeys() {
-    ImmutableSet.Builder<String> builder = ImmutableSet.builder();
+  private Set<StyleCopActiveRule> enabledRuleKeys() {
+    ImmutableSet.Builder<StyleCopActiveRule> builder = ImmutableSet.builder();
     for (ActiveRule activeRule : profile.getActiveRulesByRepository(StyleCopPlugin.REPOSITORY_KEY)) {
-      builder.add(activeRule.getRuleKey());
+    	String effectiveConfigKey = activeRule.getConfigKey();
+        if (effectiveConfigKey == null) {
+          effectiveConfigKey = activeRule.getParameter(CUSTOM_RULE_NAME_PARAMETER);
+        } else {
+          effectiveConfigKey = activeRule.getRuleKey();
+        }
+        builder.add(new StyleCopActiveRule(activeRule.getRuleKey(), effectiveConfigKey));
     }
     return builder.build();
+  }
+  
+  private static class StyleCopActiveRule
+  {
+    String ruleKey;
+    String effectiveConfigKey;
+    
+    public StyleCopActiveRule(String ruleKey, String effectiveConfigKey) {
+		this.ruleKey = ruleKey;
+		this.effectiveConfigKey = effectiveConfigKey;
+	}
+
+	public String getRuleKey() {
+		return ruleKey;
+	}
+
+	public String getEffectiveConfigKey() {
+		return effectiveConfigKey;
+	}
+	  
+	  
   }
 
 }
