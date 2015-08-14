@@ -42,8 +42,7 @@ public class Tests {
 
   static {
     OrchestratorBuilder orchestratorBuilder = Orchestrator.builderEnv()
-      .addPlugin("stylecop")
-      .setMainPluginKey("stylecop")
+      .addPlugin(FileLocation.of("../../target/sonar-stylecop-plugin.jar"))
       .addPlugin("csharp")
       .restoreProfileAtStartup(FileLocation.of("profiles/profile.xml"))
       .restoreProfileAtStartup(FileLocation.of("profiles/hungarian_rule.xml"));
