@@ -44,8 +44,8 @@
 		<tag>HEAD</tag>
 	</scm>
 	<issueManagement>
-		<system>JIRA</system>
-		<url>http://jira.codehaus.org/browse/SONARPLUGINS/component/16487</url>
+		<system>GitHub</system>
+		<url>https://github.com/SonarQubeCommunity/sonar-stylecop/issues</url>
 	</issueManagement>
 
 	<properties>
@@ -151,4 +151,8 @@
 		</plugins>
 	</build>
 
+	<ciManagement>
+		<system>AppVeyor</system>
+		<url>https://ci.appveyor.com/project/SonarSource/sonar-stylecop</url>
+	</ciManagement>
 </project>
