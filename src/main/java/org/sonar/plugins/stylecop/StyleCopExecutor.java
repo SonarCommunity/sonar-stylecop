@@ -1,7 +1,7 @@
 /*
  * SonarQube StyleCop Plugin
- * Copyright (C) 2014 SonarSource
- * dev@sonar.codehaus.org
+ * Copyright (C) 2014-2016 SonarSource SA
+ * mailto:contact AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -13,62 +13,60 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 package org.sonar.plugins.stylecop;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import org.sonar.api.utils.SonarException;
 import org.sonar.api.utils.command.Command;
 import org.sonar.api.utils.command.CommandException;
 import org.sonar.api.utils.command.CommandExecutor;
 import org.sonar.api.utils.command.StreamConsumer;
-
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import org.sonar.api.utils.log.Logger;
+import org.sonar.api.utils.log.Loggers;
 
 public class StyleCopExecutor {
 
-  private static final IssuesFilteringConsumer ISSUES_FILTERING_CONSUMER = new IssuesFilteringConsumer();
+	private static final IssuesFilteringConsumer ISSUES_FILTERING_CONSUMER = new IssuesFilteringConsumer();
 
-  public void execute(String executable, String msBuildFile, int timeoutMinutes, String timeoutExceptionMessage) {
-    try {
-      CommandExecutor.create().execute(
-        Command.create(executable)
-          .addArgument(msBuildFile),
-        ISSUES_FILTERING_CONSUMER, ISSUES_FILTERING_CONSUMER, TimeUnit.MINUTES.toMillis(timeoutMinutes));
-    } catch (CommandException e) {
-      if (isTimeout(e)) {
-        throw new SonarException(timeoutExceptionMessage, e);
-      }
-      throw e;
-    }
-  }
+	public void execute(String executable, String msBuildFile, int timeoutMinutes, String timeoutExceptionMessage) {
+		try {
+			CommandExecutor.create().execute(Command.create(executable).addArgument(msBuildFile), ISSUES_FILTERING_CONSUMER,
+					ISSUES_FILTERING_CONSUMER, TimeUnit.MINUTES.toMillis(timeoutMinutes));
+		} catch (CommandException e) {
+			if (isTimeout(e)) {
+				throw new SonarException(timeoutExceptionMessage, e);
+			}
+			throw e;
+		}
+	}
 
-  private static boolean isTimeout(CommandException e) {
-    return e.getCause() instanceof TimeoutException;
-  }
+	private static boolean isTimeout(CommandException e) {
+		return e.getCause() instanceof TimeoutException;
+	}
 
-  private static class IssuesFilteringConsumer implements StreamConsumer {
+	private static class IssuesFilteringConsumer implements StreamConsumer {
 
-    private static final Logger LOG = LoggerFactory.getLogger(IssuesFilteringConsumer.class);
+		private static final Logger LOG = Loggers.get(IssuesFilteringConsumer.class);
 
-    @Override
-    public void consumeLine(String line) {
-      if (isIssue(line)) {
-        LOG.debug(line);
-      } else {
-        LOG.info(line);
-      }
-    }
+		@Override
+		public void consumeLine(String line) {
+			if (isIssue(line)) {
+				LOG.debug(line);
+			} else {
+				LOG.info(line);
+			}
+		}
 
-    private static boolean isIssue(String line) {
-      return line.contains(": warning : SA");
-    }
+		private static boolean isIssue(String line) {
+			return line.contains(": warning : SA");
+		}
 
-  }
+	}
 
 }

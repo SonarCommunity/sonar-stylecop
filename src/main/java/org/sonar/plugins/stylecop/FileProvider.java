@@ -1,7 +1,7 @@
 /*
  * SonarQube StyleCop Plugin
- * Copyright (C) 2014 SonarSource
- * dev@sonar.codehaus.org
+ * Copyright (C) 2014-2016 SonarSource SA
+ * mailto:contact AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -13,14 +13,20 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 package org.sonar.plugins.stylecop;
 
 import org.sonar.api.batch.SensorContext;
+import org.sonar.api.batch.fs.FileSystem;
+import org.sonar.api.batch.fs.InputFile;
+import org.sonar.api.batch.fs.InputPath;
+import org.sonar.api.batch.fs.internal.DefaultInputFile;
 import org.sonar.api.resources.Project;
+import org.sonar.api.utils.log.Logger;
+import org.sonar.api.utils.log.Loggers;
 
 import java.io.File;
 
@@ -28,6 +34,8 @@ public class FileProvider {
 
   private final Project project;
   private final SensorContext context;
+  
+  private static final Logger LOG = Loggers.get(FileProvider.class);
 
   public FileProvider(Project project, SensorContext context) {
     this.project = project;
@@ -36,7 +44,16 @@ public class FileProvider {
 
   public org.sonar.api.resources.File fromIOFile(File file) {
     // Workaround SonarQube < 4.2, the context should not be required
-    return context.getResource(org.sonar.api.resources.File.fromIOFile(new File(file.getAbsolutePath()), project));
+  	FileSystem fs = context.fileSystem();
+  	InputFile inFile = fs.inputFile(fs.predicates().is(file));
+  	
+  	if(inFile == null)
+  	{
+  		LOG.debug("Base dir: {}", fs.baseDir());
+  		LOG.debug("FileProvider for {} returns an InputFile that is {}", file.getAbsolutePath(), inFile);
+  	}
+
+  	return inFile == null ? null : (org.sonar.api.resources.File) context.getResource(inFile);
   }
 
 }
